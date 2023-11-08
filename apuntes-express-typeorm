@@ -1,0 +1,456 @@
+Backend  project with Express / TypeORM / Nodemon en TypeScript
+
+1 - First configs:
+
+Git repository:
+
+git init .
+.gitignore(con node_modules)
+Readme
+License
+
+
+Instalar npm y configurar JSON info:
+
+// https://docs.npmjs.com/cli/v10/commands/npm-init 
+npm init
+
+
+Instalar Express (local)
+
+// https://www.npmjs.com/package/express 
+npm install express
+
+
+Instalar typescript:
+
+
+// https://www.npmjs.com/package/typescript 
+npm install typescript -D
+
+Generar .tsconfig.json:
+
+npx tsc --init
+// ¿ También serviría tsc —init ?
+
+Instalar definiciones de tipos TypeScript en las bibliotecas de Express y Node en devDependencies:
+
+npm install @types/express @types/node -D
+
+
+Abrir outdir en el tsconfig.json para añadir /buld o /dist para que se compile el index.js, que es la ruta de entrada a nuestra app backend.
+
+Instalar nodemon en dev, con esto ejecutamos TypeScript y nos ahorramos compilar el index.js continuamente:
+
+// https://www.npmjs.com/package/nodemon 
+npm install ts-node nodemon -D
+
+test de arranque:
+
+npx nodemon ./src/index.ts
+
+.JSON development scripts:
+
+{
+"dev": "nodemon ./src/index.ts",
+"build": "tsc”,
+"start": "node ./build/index.js”
+}
+
+npm run dev - para ejecutar el index.ts sin compilar.
+npm run tsc - para compilar en ./build el index.ts
+npm run start - para ejecutar el último ./build index.js compilado
+
+¿Qué es save? ¿Instalado por error al poner -save en algún comando?
+https://www.npmjs.com/package/save 
+
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.6.2",
+    "reflect-metadata": "^0.1.13",
+    "save": "^2.9.0",
+    "typeorm": "^0.3.17"
+  }
+}
+
+Install TypeORM y MySQL(2):
+
+// https://www.npmjs.com/package/typeorm 
+npm i typeorm
+// https://www.npmjs.com/package/reflect-metadata npm i reflect-metadata
+ npm install @types/node --save-dev ( si no está instalado)
+
+// https://www.npmjs.com/package/mysql2 
+npm i mysql2 -- save (depende de nuestra bd) 
+
+Descomentamos las siguientes lineas en nuestro tsconfig.json: 
+
+      17. “experimentalDecorators": true,
+      18. ”emitDecoratorMetadata": true,
+
+
+
+2 - Database Config:
+
+Creo un archivo para la configuración de mi database:
+
+./src/db.ts
+
+Con una configuración de MySQL en “localhost”, puerto 3306, usuario “root” y pass “xxxxxxxx” …
+
+import "reflect-metadata"
+import { DataSource } from "typeorm"
+
+export const AppDataSource = new DataSource({
+    type: "mysql",
+    host: "localhost",
+    port: 3306,
+    username: "root",
+    password: "",
+    database: “nuestra-db",
+    entities: [],
+    migrations: [],
+    synchronize: false,
+    logging: false,
+})
+
+
+
+3 - Test de inicio del host y conexión a la database
+
+Ejecutar comando npm run dev en ./  index.ts para el test: 
+import express, { Request, Response } from "express"
+import { AppDataSource } from "./db";
+
+const app = express()
+const PORT = 3000;
+
+app.get('/',(req:Request,res:Response)=>{
+    res.send('Hello world!')
+});
+
+AppDataSource.initialize()
+.then(() => { console.log('Database connected');
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    })
+})
+.catch(error => { console.log(error)
+})
+
+
+4 - Migraciones
+
+Se generan ejecutando el comando:
+
+npx typeorm migration:create ./src/migration/user
+
+
+import { MigrationInterface, QueryRunner } from "typeorm"; 
+
+export class User1694706023000 implements MigrationInterface { 
+
+	public async up(queryRunner: QueryRunner): Promise<void> { 
+	} 
+	public async down(queryRunner: QueryRunner): Promise<void> { 
+	} 
+} 
+
+Añadimos e importamos la migración a nuestro AppDataSource en db.ts:
+
+import { User1698502319949 } from "./migration/1698502319949-user"
+
+export const AppDataSource = new DataSource({
+    type: "mysql",
+    host: "localhost",
+    port: 3306,
+    username: "root",
+    password: "",
+    database: "tattoo-studio-db",
+    entities: [],
+    migrations: [User1698502319949],
+    synchronize: false,
+    logging: false,
+})
+
+
+Ejemplo de tabla:
+
+Creación de un tabla:
+
+Para añadir clases de typeORM debemos importarlas también. Como vamos a usar tabla importaremos su clase:
+
+import { MigrationInterface, QueryRunner, Table } from "typeorm"
+
+Primero se escriben los campos a crear, Esteve este caso una tabla, en el up,
+y los cambios a revertir en este caso, en el down:
+
+public async up(queryRunner: QueryRunner): Promise<void> { 
+	await queryRunner.createTable(
+            new Table({
+                name: "films",
+                columns: [
+                    {
+                        name: "id",
+                        type: "int",
+                        isPrimary: true,
+                        isGenerated: true,
+                        generationStrategy: "increment",
+                    },
+                    {
+                        name: "title",
+                        type: "varchar",
+                        length: "255",
+                    },
+                    {
+                        name: "director",
+                        type: "varchar",
+                        length: "255",
+                    }
+                ],
+            }),
+            true
+        ); 
+}
+
+public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.dropTable("films");
+}
+
+Con este comando lanzamos la estructura de la tabla a la base de datos:
+
+npx typeorm-ts-node-commonjs migration:run -d ./src/db.ts
+
+Con este comando revertimos el ultimo cambio (…y así en orden inverso si lo ejecutamos varias veces)
+
+npx typeorm-ts-node-commonjs migration:revert -d ./src/db.ts
+
+
+!BUG A TENER EN CUENTA:
+
+!Solución: dobles comilla en user
+
+      {
+        name: "role",
+        type: "enum",
+        enum: ["user", "admin", "super_admin"],
+        default: "'user'"
+       },
+
+
+Error con “enum” y default que se soluciona con más comillas.
+
+https://github.com/typeorm/typeorm/issues/4833#issuecomment-647089976 
+
+
+5 - Modelos
+
+./src/models/
+
+Son Clases.js
+
+Suelen ir en una carpeta llamada models o entities, en este ejemplo Film va en mayúscula porque es una CLASE
+
+comando para crear la estructura:
+
+npx typeorm entity:create ./src/models/Film
+
+Se genera esta estructura en el archivo Film.ts:
+
+import { Entity } from "typeorm"
+
+@Entity()
+export class Film {
+
+}
+
+Con esta ENTIDAD(modelo) creamos una CLASE que define mi TABLA
+
+Ejemplo:
+
+import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+
+@Entity("films")
+export class Film {
+
+    @PrimaryGeneratedColumn()
+    id!: number
+    
+    @Column()
+    title!: string
+
+    @Column()
+    director!: string
+}
+
+¿Por qué BaseEntity hace falta?
+@Entity("films")
+export class Film extends BaseEntity{
+
+La importo en el db.ts:
+
+export const AppDataSource = new DataSource({
+…
+    entities: [Film],
+…
+})
+
+https://www.w3schools.com/mysql/default.asp 
+
+
+6 - bcrypt
+
+https://www.npmjs.com/package/bcrypt 
+
+install app
+
+npm i bcrypt
+
+Install tipos
+
+npm i  @types/bcrypt -D
+
+Se importa en el controlador, por ejemplo:
+
+import bcrypt from "bcrypt";
+
+Ejemplo de uso, encriptar en registro de user:
+
+const register = async (req: Request, res: Response) => {
+    try {
+	const password = req.body.password;
+	const encrytedPass = bcrypt.hashSync(password, 10);
+
+	if (email.includes('@') && email.includes(‘.’){
+            const newUser = await User.create(
+                {
+                    user: req.body.user,
+                    email: req.body.email,
+                    password: encrytedPass
+                }
+         ).save()
+}
+
+
+Ejemplo de uso de desencriptar en login de user:
+
+// login
+const login = async (req: Request, res: Response) => {
+    try {
+        //recupero info del body
+        const email = req.body.email
+        const password = req.body.password
+
+        // consulto en bd un usuario por email
+        const user = await User.findOneBy(
+            {
+                email: email
+            }
+        )
+
+	if (!bcrypt.compareSync(password, user.password)) {
+            return res.status(400).json(
+                {
+                    success: true,
+                    message: 'User or password incorrect',
+                }
+            )
+        }
+
+
+
+7 - JWT Y MIDDLEWARE
+
+Generar token:
+
+// https://jwt.io/ 
+
+// instalar
+npm i jsonwebtoken
+
+// añadir tipos al tsconfig.
+npm i --save-dev @types/jsonwebtoken
+
+En userRoutes.ts, dentro del login:
+
+// lo importo 
+import jwt from "jsonwebtoken";
+ 
+// en el login, genero el token:
+const  token = jwt.sign(
+	{
+		// lo que guardo en el payload (el objeto que contiene esta 				información que le he pasado)
+		id: user.id,
+		role: user.role
+	},
+	// palabras clave / secreta (suele ser un hash)
+	// el secreto pertenece a la API, es el mismo para todos sus users
+	"secreto", 
+	{
+	// tiempo de la sesión
+      	  expiresIn: "2h",
+   	}
+   );
+
+return res.json(
+	{
+		success: true,
+		message: “User logged successfully”,
+		token: token
+	}
+)
+
+
+MIDDLEWARE:
+
+Creamos directorio ./src/middelwares
+
+En este archivo va la lógica del middle
+
+// se importa el metodo NextFunction
+Import { NextFunction } from “express”;
+next();
+
+Se crea en su archivo y se aplica a una ruta, entre una ruta y su controlador:
+
+Ejemplo de la ruta de middleware:
+
+// antes de ejecutar profile ejecuta el middleware
+Router.get(/profile, miMiddleware, profile)
+
+
+En el postman lo comprobamos con authorizationBearer token y pego mi token para el send:
+
+￼
+
+Y se recupera desde el middle con:
+
+req.headers.authorization
+
+BUG del type: any, solución: Carpeta src/types/index.d.ts
+
+
+EXTRA: REGEX
+
+.test (regex)
+
+Ejemplo de regex usando una función .test: 
+
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+
+  if (emailRegex.test(email)) {
+    res.json({ mensaje: 'Correo electrónico válido' });
+  } else {
+    res.json({ mensaje: 'Correo electrónico no válido' });
+  }
+
+Ej de regex pear pass: ^(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z!@#$%^&*]{4,12}$
+
+
+——————————————————————————————————————————
+——————————————————————————————————————————
+——————————————————————————————————————————
+——————————————————————————————————————————
+——————————————————————————————————————————
+
+8 - Rutas y Controladores
