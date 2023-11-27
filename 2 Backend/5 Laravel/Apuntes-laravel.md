@@ -122,34 +122,183 @@ php artisan migrate
 php artisan migrate:rollback
 ```
 
+### 1. **Generar un Seeder:**
 
-## Resumen de los pasos para crear seeders en Laravel:
+- Abre tu terminal y ejecuta el siguiente comando para crear un seeder. En este ejemplo, usaremos un seeder llamado `UserSeeder`:
+    
+    ```bash
+    php artisan make:seeder UserSeeder
+    
+    ```
+    
+- Esto creará un archivo `UserSeeder.php` en el directorio `database/seeders`.
 
-1. **Introducción:**
-   - Laravel permite llenar la base de datos con datos mediante seed classes.
-   - Las seed classes se almacenan en el directorio database/seeders.
-   - Se utiliza la clase DatabaseSeeder para controlar el orden de siembra.
+### 2. **Definir la Lógica del Seeder:**
 
-2. **Escritura de Seeders:**
-   - Para generar un seeder, ejecutar el comando Artisan: `php artisan make:seeder UserSeeder`.
-   - Un seeder contiene el método por defecto "run" que se ejecuta con `php artisan db:seed`.
-   - Se pueden usar el constructor de consultas o factorías de modelos Eloquent.
+- Abre el archivo `UserSeeder.php` recién creado y modifica el método `run` para insertar datos en tu tabla de usuarios. Puedes usar el Query Builder o Eloquent para hacerlo. Aquí tienes un ejemplo básico utilizando el Query Builder:
+    
+    ```php
+    <?php
+     
+    namespace Database\Seeders;
+     
+    use Illuminate\Database\Seeder;
+    use Illuminate\Support\Facades\DB;
+    use Illuminate\Support\Facades\Hash;
+    use Illuminate\Support\Str;
+     
+    class DatabaseSeeder extends Seeder
+    {
+        /**
+         * Seed the application's database.
+         */
+        public function run(): void
+        {
+            {
+                DB::table('users')->insert([
+                    'name' => Str::random(10),
+                    'email' => 'user@user.com',
+                    'password' => Hash::make('password'),
+                    'role'=>'user'
+                ]);
+        
+                DB::table('users')->insert([
+                    'name' => Str::random(10),
+                    'email' => 'admin@admin.com',
+                    'password' => Hash::make('password'),
+                    'role'=>'admin'
+                ]);
+        
+                DB::table('users')->insert([
+                    'name' => Str::random(10),
+                    'email' => 'super_admin@super_admin.com',
+                    'password' => Hash::make('password'),
+                    'role'=>'super_admin'
+                ]);
+            }
+        }
+    }
+    ```
+    
 
-3. **Uso de Model Factories:**
-   - Se pueden usar factorías de modelos para generar grandes cantidades de registros.
-   - Ejemplo de creación de 50 usuarios con una publicación relacionada.
+### 3. **Generar una Factoría de Modelo:**
 
-4. **Llamada a Seeders Adicionales:**
-   - En DatabaseSeeder, usar el método `call` para ejecutar seeders adicionales.
-   - Permite dividir la siembra en múltiples archivos.
+- Laravel proporciona factorías para ayudar a generar datos de prueba. Crea una factoría para el modelo `User` ejecutando el siguiente comando:
+    
+    ```bash
+    php artisan make:factory UserFactory
+    
+    ```
+    
+- Esto creará un archivo `UserFactory.php` en el directorio `database/factories`.
 
-5. **Desactivación de Eventos de Modelo:**
-   - Para evitar que los modelos envíen eventos durante la siembra, se puede usar el trait WithoutModelEvents.
+### 4. **Definir la Factoría:**
 
-6. **Ejecución de Seeders:**
-   - Ejecutar `php artisan db:seed` para sembrar la base de datos.
-   - Opcionalmente, usar `--class` para ejecutar un seeder específico.
+- Abre el archivo `UserFactory.php` y define la estructura de los datos que deseas generar. Aquí hay un ejemplo:
+    
+    ```php
+    use Illuminate\\Database\\Eloquent\\Factories\\Factory;
+    
+    class UserFactory extends Factory
+    {
+        protected $model = \\App\\Models\\User::class;
+    
+        public function definition()
+        {
+            return [
+                'name' => $this->faker->name,
+                'email' => $this->faker->unique()->safeEmail,
+                'password' => bcrypt('password'),
+            ];
+        }
+    }
+    
+    ```
+    
 
-7. **Ejecución en Producción:**
-   - Al ejecutar seeders en producción, se pide confirmación.
-   - Usar `--force` para forzar la ejecución sin confirmación.
+### 5. **Llenar la Base de Datos con Factory:**
+
+- Ahora, puedes utilizar la factoría en tu seeder para llenar la base de datos con múltiples registros. Modifica el método `run` en `UserSeeder.php` para usar la factoría:
+    
+    ```php
+    use App\\Models\\User;
+    
+    class UserSeeder extends Seeder
+    {
+        public function run()
+        {
+            User::factory()->count(10)->create();
+        }
+    }
+    
+    ```
+    
+- Este ejemplo crea 10 usuarios utilizando la factoría.
+
+### 6. **Ejecutar el Seeder:**
+
+- Finalmente, ejecuta el seeder para llenar la base de datos. Utiliza el siguiente comando en la terminal:
+    
+    ```bash
+    php artisan db:seed --class=UserSeeder
+    
+    ```
+    
+- Esto ejecutará específicamente el seeder de usuarios.
+
+Ahora deberías tener tu seeder configurado para llenar la base de datos con datos de prueba utilizando la factoría de modelos. Puedes adaptar estos pasos para otros modelos y tablas según tus necesidades.
+
+## Faker para llenar la base de datos
+
+### 1. **Instalar Faker:**
+
+- Abre tu terminal y ejecuta el siguiente comando para instalar la librería Faker:
+    
+    ```bash
+    composer require fzaninotto/faker
+    
+    ```
+    
+
+### 2. **Usar Faker en la Factoría:**
+
+- En tu archivo `UserFactory.php`, utiliza Faker para generar datos más realistas. Asegúrate de importar la clase `Faker` al principio del archivo:
+    
+    ```php
+    use Faker\\Generator as Faker;
+    
+    ```
+    
+- Modifica la factoría para utilizar Faker en lugar de datos estáticos:
+    
+    ```php
+    use Illuminate\\Database\\Eloquent\\Factories\\Factory;
+    use Faker\\Generator as Faker;
+    
+    class UserFactory extends Factory
+    {
+        protected $model = \\App\\Models\\User::class;
+    
+        public function definition()
+        {
+            $faker = \\Faker\\Factory::create();
+            return [
+                'name' => $faker->name,
+                'email' => $faker->unique()->safeEmail,
+                'password' => bcrypt('password'),
+            ];
+        }
+    }
+    
+    ```
+    
+
+### 3. **Llenar la Base de Datos con Factory y Faker:**
+
+- Ahora, al ejecutar el seeder, los datos serán generados de manera más aleatoria y realista gracias a Faker:
+    
+    ```bash
+    php artisan db:seed --class=UserSeeder
+    
+    ```
+    
