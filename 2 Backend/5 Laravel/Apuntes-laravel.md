@@ -121,3 +121,35 @@ php artisan migrate
 ```bash
 php artisan migrate:rollback
 ```
+
+
+## Resumen de los pasos para crear seeders en Laravel:
+
+1. **Introducción:**
+   - Laravel permite llenar la base de datos con datos mediante seed classes.
+   - Las seed classes se almacenan en el directorio database/seeders.
+   - Se utiliza la clase DatabaseSeeder para controlar el orden de siembra.
+
+2. **Escritura de Seeders:**
+   - Para generar un seeder, ejecutar el comando Artisan: `php artisan make:seeder UserSeeder`.
+   - Un seeder contiene el método por defecto "run" que se ejecuta con `php artisan db:seed`.
+   - Se pueden usar el constructor de consultas o factorías de modelos Eloquent.
+
+3. **Uso de Model Factories:**
+   - Se pueden usar factorías de modelos para generar grandes cantidades de registros.
+   - Ejemplo de creación de 50 usuarios con una publicación relacionada.
+
+4. **Llamada a Seeders Adicionales:**
+   - En DatabaseSeeder, usar el método `call` para ejecutar seeders adicionales.
+   - Permite dividir la siembra en múltiples archivos.
+
+5. **Desactivación de Eventos de Modelo:**
+   - Para evitar que los modelos envíen eventos durante la siembra, se puede usar el trait WithoutModelEvents.
+
+6. **Ejecución de Seeders:**
+   - Ejecutar `php artisan db:seed` para sembrar la base de datos.
+   - Opcionalmente, usar `--class` para ejecutar un seeder específico.
+
+7. **Ejecución en Producción:**
+   - Al ejecutar seeders en producción, se pide confirmación.
+   - Usar `--force` para forzar la ejecución sin confirmación.
